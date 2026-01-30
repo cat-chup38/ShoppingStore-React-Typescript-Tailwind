@@ -7,33 +7,34 @@ interface ProductContextType {
     addToCart: (product: CartItemType) => void;
     removeToCart: (productId: number) => void;
     updateQuantity: (id: number, delta: number) => void;
+    productos: ProductoType[];
+    setProductos: (products: ProductoType[]) => void;
 }
 
 
-// 2. Creamos el objeto Contexto (inicialmente vacío)
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 
-// 3. El PROVEEDOR (El que reparte la señal)
 export const ProductProvider = ({ children }: { children: ReactNode }) => {
-	// Se comentó porque ahora se guarda en LocalStorage
-    // const [cart, setCart] = useState<ProductoType[]>([]);
-	const [cart, setCart] = useState<CartItemType[]>(() => {
-		const savedCart = localStorage.getItem('shopping-cart'); // Inicializamos el estado con lo que haya en LocalStorage (si existe)
-		return savedCart ? JSON.parse(savedCart) : [];
-	});
+    const [productos, setProductos] = useState<ProductoType[]>([]);
+    const [cart, setCart] = useState<CartItemType[]>(() => {
+        const savedCart = localStorage.getItem('shopping-cart');
+        return savedCart ? JSON.parse(savedCart) : [];
+    });
 
-	useEffect(() => {
-		localStorage.setItem('shopping-cart', JSON.stringify(cart)); // Cada vez que 'cart' cambie, se guarda en el navegador
-		console.log("LocalStorage actualizado:", cart);
-	}, [cart]); // Se ejecuta solo cuando 'cart' se modifica
+    useEffect(() => {
+        localStorage.setItem('shopping-cart', JSON.stringify(cart));
+        console.log("LocalStorage actualizado:", cart);
+    }, [cart]);
 
-    /* const addToCart = (product: ProductoType) => {
-        setCart((prev) => [...prev, product]);
-    }; */
     const addToCart = (product: ProductoType) => {
+        if (!product.isActive) {
+            console.warn(`No se puede agregar "${product.title}" - Producto desactivado`);
+            alert(`El producto "${product.title}" está desactivado y no se puede agregar al carrito`);
+            return;
+        }
+
         setCart((prev) => {
-            // Revisamos si ya existe para no duplicar filas, sino aumentar cantidad
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
                 return prev.map(item =>
@@ -42,13 +43,14 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
                     : item
                 );
             }
-            // Si es nuevo, le agregamos la propiedad cantidadPedido: 1
             return [...prev, { ...product, cantidadPedido: 1 }];
         });
     };
+
     const removeToCart = (productId: number) => {
-		setCart((prev) => prev.filter(item => item.id !== productId));
+        setCart((prev) => prev.filter(item => item.id !== productId));
     };
+
     const updateQuantity = (id: number, delta: number) => {
         setCart((prev) => prev.map(item => {
             if (item.id === id) {
@@ -60,13 +62,20 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <ProductContext.Provider value={{ cart, addToCart, removeToCart, updateQuantity }}>
+        <ProductContext.Provider
+            value={{
+                cart,
+                addToCart,
+                removeToCart,
+                updateQuantity,
+                productos,
+                setProductos,
+        }}>
             {children}
         </ProductContext.Provider>
     );
 };
 
-// 4. El Hook (La antena para conectarse)
 export const useProducts = () => {
     const context = useContext(ProductContext);
     if (!context) throw new Error("useProducts debe usarse dentro de un ProductProvider");
