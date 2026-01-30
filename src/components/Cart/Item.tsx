@@ -71,7 +71,7 @@ export const Item: React.FC<ItemProps> = ({ index, row }) => {
                         ${row.isActive ? 'hover:border-indigo-400' : 'opacity-50 cursor-not-allowed'}
                     `}
                 >
-                    Quitar
+                    {row.isActive ? 'Quitar' : 'No Disponible'}
                 </button>
             </td>
         </tr>
